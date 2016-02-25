@@ -1,0 +1,858 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass scrreprt
+\use_default_options true
+\maintain_unincluded_children false
+\language spanish
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry true
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 1cm
+\topmargin 2cm
+\rightmargin 1cm
+\bottommargin 2cm
+\headheight 1cm
+\headsep 1cm
+\footskip 1cm
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation skip
+\defskip medskip
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+SOPER: Memoria práctica 1
+\end_layout
+
+\begin_layout Author
+Darío Adrián Hernández Barroso 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+
+\backslash
+
+\end_layout
+
+\end_inset
+
+ Ángel Manuel Martín Canto
+\end_layout
+
+\begin_layout Date
+2016-02-25
+\end_layout
+
+\begin_layout Section*
+Descriptores de fichero
+\end_layout
+
+\begin_layout Standard
+La parte de la practica que trataba exclusivamente sobre descriptores de
+ fichero y su uso no contenía ningún ejercicio entregable.
+ Sin embargo, a modo de aprendizaje y asentamiento de conocimientos realizamos
+ un clon sencillo de la utilidad cat de UNIX.
+ Dicho programa se limita a concatenar los archivos que recibe como argumentos(o
+ la entrada estándar en caso de no recibir argumentos) y mostrarlos por
+ salida.
+ Con el uso de redirecciones sirve como editor primitivo para leer y escribir
+ archivos.
+ Adjuntamos el código fuente como cat.c
+\end_layout
+
+\begin_layout Section*
+Procesos y fork
+\end_layout
+
+\begin_layout Subsection*
+Ejercicio 4 original
+\end_layout
+
+\begin_layout Standard
+En el ejercicio 4 hemos añadido salidas por pantalla por mostrar los PIDs
+ de todos los procesos, los PPIDs de los hijos y el momento en el que cada
+ proceso muere.
+ También hemos añadido sleeps en los hijos y antes de salir para poder ver
+ el arbol de procesos desenvolverse.
+ Con solo estos cambios la salida de el programa es:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+PID = 1094
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 1094
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 1094
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 1207 CON PADRE 1094
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 1094
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 1206 CON PADRE 1094
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 1208 CON PADRE 1094
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 1094
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 1206
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 1361 CON PADRE 1206
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 1362 CON PADRE 1207
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 1206
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 1363 CON PADRE 1206
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 1208
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 1207
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 1206
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 1361
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 1390 CON PADRE 1361
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 1362
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 1363
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 1361
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 1390
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Un 
+\begin_inset Quotes eld
+\end_inset
+
+pswait -p 1094
+\begin_inset Quotes erd
+\end_inset
+
+ durante la ejecución del programa llega a mostrar lo siguiente:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+ejercicio4(1094)-+-ejercicio4(1206)
+\end_layout
+
+\begin_layout Plain Layout
+
+                 +-ejercicio4(1207)
+\end_layout
+
+\begin_layout Plain Layout
+
+                 +-ejercicio4(1208)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Y sucesivas llamadas no muestran nada.
+ Como se ve en la salida del programa el proceso 1094 es el primero en morir,
+ dejando al resto del árbol huérfano e impidiendo que pstree vea el árbol
+ a partir del PID 1094.
+\end_layout
+
+\begin_layout Standard
+Usando 
+\begin_inset Quotes eld
+\end_inset
+
+pswait | grep ejercicio4
+\begin_inset Quotes erd
+\end_inset
+
+ múltiples veces se ven fragmentos huérfanos apareciendo y desapareciendo.
+\end_layout
+
+\begin_layout Subsection*
+Con un wait()
+\end_layout
+
+\begin_layout Standard
+Tras añadir un wait la salida del programa es la siguiente:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+PID = 2481
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 2481
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 2604 CON PADRE 2481
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 2481
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 2481
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 2605 CON PADRE 2481
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 2606 CON PADRE 2481
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 2604
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 2604
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 2774 CON PADRE 2604
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 2605
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 2773 CON PADRE 2604
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 2775 CON PADRE 2605
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 2606
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 2481
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 2924 CON PADRE 2773
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 2774
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 2775
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 2604
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 2605
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 2924
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 2773
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Sigue habiendo procesos huerfanos, por ejemplo 31231, que muere de los últimos
+ pero cuyo padre, 31157 muere antes.
+\end_layout
+
+\begin_layout Standard
+La ejecución de 
+\begin_inset Quotes eld
+\end_inset
+
+pstree -p 2481
+\begin_inset Quotes erd
+\end_inset
+
+ muestra diversos arboles incompletos antes de no poder mostrar más por
+ la muerte del proceso raíz:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+ejercicio4(2481)-+-ejercicio4(2604)-+-ejercicio4(2773)
+\end_layout
+
+\begin_layout Plain Layout
+
+                 |                  +-ejercicio4(2774)
+\end_layout
+
+\begin_layout Plain Layout
+
+                 +-ejercicio4(2605)---ejercicio4(2775)
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+La razón es que wait() espera a un solo proceso hijo pero cada proceso genera
+ hasta tres hijos, por lo que dos se pueden quedar huérfanos.
+\end_layout
+
+\begin_layout Subsection*
+Con el número necesario de wait()'s
+\end_layout
+
+\begin_layout Standard
+Tras arreglar esto, ejecutando wait() tantas veces como hijos se crean(notese
+ que cada proceso hace de 0 a 3 hijos) la salida del programa es la siguiente:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+PID = 3097
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 3097
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 3097
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 3097
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 3171 CON PADRE 3097
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 3170 CON PADRE 3097
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 3172 CON PADRE 3097
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 3171
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 3304 CON PADRE 3171
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 3170
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 3305 CON PADRE 3170
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 3170
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 3306 CON PADRE 3170
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 3172
+\end_layout
+
+\begin_layout Plain Layout
+
+PADRE 3305
+\end_layout
+
+\begin_layout Plain Layout
+
+HIJO 3441 CON PADRE 3305
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 3304
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 3306
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 3171
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 3441
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 3305
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 3170
+\end_layout
+
+\begin_layout Plain Layout
+
+MUERE 3097
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Revisando la salida vemos todas las muerte ordenadas y contamos que son
+ 8, esto es 
+\begin_inset Formula $NUM\_PROCS^{2}-1=3^{2}-1=8$
+\end_inset
+
+, justo lo que esperamos de un fork() en un bucle de que se ejecuta 
+\begin_inset Formula $NUM\_PROCS$
+\end_inset
+
+ veces en la raiz.
+\end_layout
+
+\begin_layout Standard
+En el código fuente que entregamos se puede cambiar el numero de WAITs comentand
+o o descomentando macros.
+ Por defecto se esperan todas las veces necesarias.
+\end_layout
+
+\begin_layout Section*
+Ejecución de programas - Llamadas exec()
+\end_layout
+
+\begin_layout Standard
+El único ejercicio entregable de está seccion es el número 8.
+ Simplemente usamos la función execvp(), que permite pasar argumentos para
+ transmutar el proceso en 
+\begin_inset Quotes eld
+\end_inset
+
+du --apparent-size -BK <nombre_del_ejecutable>
+\begin_inset Quotes erd
+\end_inset
+
+.
+ A partir de ese punto du imprime el tamaño en KB del ejecutable.
+ Tras execvp() solo hay código para generar un error dado que nunca se debería
+ llegar a ejecutar esa sección si exec funciona.
+\end_layout
+
+\begin_layout Section*
+Comunicación entre procesos con tuberías
+\end_layout
+
+\begin_layout Standard
+El ejercicio 9 requiere comunicar procesos de una jerarquía mediante tuberías.
+ La comunicación es en los dos sentidos pero el orden de turnos para hablar
+ está bien definido.
+ Valoramos la solución de generar dos tuberías por proceso hijo, una para
+ hablar de hijo a padre y otra para hablar de padre a hijo.
+ En vez de eso, reutilizamos una tubería en los dos sentidos, primero habla
+ el padre, después el padre espera a que el proceso hijo termine(este es
+ otra requisito del ejercicio) y por último lee de la tubería con la garantía
+ de que el hijo ya ha escrito.
+ Con esta sincronización provista por wait() el programa funciona con un
+ tubería por hijo.
+ La salida del programa es:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Padre@9157 nace
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@9158 nace
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@9159 nace
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@9158:Datos enviados a través de la tubería por el proceso PID=9157
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@9159:Datos enviados a través de la tubería por el proceso PID=9157
+\end_layout
+
+\begin_layout Plain Layout
+
+Nieto@9160 nace
+\end_layout
+
+\begin_layout Plain Layout
+
+Nieto@9160:Datos enviados a través de la tubería por el proceso PID=9158
+\end_layout
+
+\begin_layout Plain Layout
+
+Nieto@9161 nace
+\end_layout
+
+\begin_layout Plain Layout
+
+Nieto@9160 muere
+\end_layout
+
+\begin_layout Plain Layout
+
+Nieto@9162 nace
+\end_layout
+
+\begin_layout Plain Layout
+
+Nieto@9161:Datos enviados a través de la tubería por el proceso PID=9158
+\end_layout
+
+\begin_layout Plain Layout
+
+Nieto@9162:Datos enviados a través de la tubería por el proceso PID=9159
+\end_layout
+
+\begin_layout Plain Layout
+
+Nieto@9162 muere
+\end_layout
+
+\begin_layout Plain Layout
+
+Nieto@9163 nace
+\end_layout
+
+\begin_layout Plain Layout
+
+Nieto@9161 muere
+\end_layout
+
+\begin_layout Plain Layout
+
+Nieto@9163:Datos enviados a través de la tubería por el proceso PID=9159
+\end_layout
+
+\begin_layout Plain Layout
+
+Nieto@9163 muere
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@9158:Nieto@9160 terminado con 0
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@9159:Nieto@9162 terminado con 0
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@9159:Datos enviados a través de la tubería por el proceso PID=9162
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@9158:Datos enviados a través de la tubería por el proceso PID=9160
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@9158:Nieto@9161 terminado con 0
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@9159:Nieto@9163 terminado con 0
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@9158:Datos enviados a través de la tubería por el proceso PID=9161
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@9159:Datos enviados a través de la tubería por el proceso PID=9163
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@9158 muere
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@9159 muere
+\end_layout
+
+\begin_layout Plain Layout
+
+Padre@9157:Hijo@9158 terminado con 0
+\end_layout
+
+\begin_layout Plain Layout
+
+Padre@9157:Datos enviados a través de la tubería por el proceso PID=9158
+\end_layout
+
+\begin_layout Plain Layout
+
+Padre@9157:Hijo@9159 terminado con 0
+\end_layout
+
+\begin_layout Plain Layout
+
+Padre@9157:Datos enviados a través de la tubería por el proceso PID=9159
+\end_layout
+
+\begin_layout Plain Layout
+
+Padre@9157 muere
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+El envío de mensajes y la creación y muerte de procesos se realiza en el
+ orden correcto.
+\end_layout
+
+\end_body
+\end_document
