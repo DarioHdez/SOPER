@@ -1,0 +1,32 @@
+# Autores: 
+#	Darío Adrián Hernández Barroso
+#	Ángel Manuel Martín
+#
+
+CC = gcc 
+#CFLAGS = -Wall -g
+CFLAGS =  -Wall -Werror
+LDFLAGS = -pthread
+
+EXE = ejercicio2 ejercicio3a ejercicio3b
+
+all: $(EXE)
+ 
+.PHONY: clean
+clean:
+	rm -f *.o core $(EXE)
+
+$(EXE): % : %.o
+	@echo "#---------------------------"
+	@echo "# Generando $@ "
+	@echo "# Depende de $^"
+	@echo "# Ha cambiado $<"
+	$(CC) $(CFLAGS) -o $@ $@.o $(LDFLAGS)
+
+%.o : %.c
+	@echo "#---------------------------"
+	@echo "# Generando $@"
+	@echo "# Depende de $^"
+	@echo "# Ha cambiado $<"
+	$(CC) $(CFLAGS) -c $<
+
