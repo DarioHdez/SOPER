@@ -28,7 +28,7 @@ void procesoA() {
         int w = rand()%13;
         char* word = tokens[w];
         
-        fprintf(file, "%s\nLOL\n", word);
+        fprintf(file, "%s\n", word);
 
         if(strcmp(word, "FIN") == 0) {
             fclose(file);
@@ -37,10 +37,35 @@ void procesoA() {
     }
 }
 
-void procesoB() {
-    int p;
-    FILE* file;
+FILE* file = NULL;
+int p = 0;
+
+void handler_alarma() {
     char buf[100];
+
+    char* ret = fgets(buf, sizeof(buf), file);
+
+    printf("Leyendo %s", ret == NULL ? "NULL\n" : buf);
+
+    if(ret == NULL || strcmp(buf, "FIN\n") == 0) {
+        int pid;
+
+        pid = fork();
+
+        if(++p >= 3) {
+            fclose(file);
+            exit(0);
+        }
+
+        if(pid == 0) {
+            procesoA();
+            exit(0);
+        }
+    }
+}
+
+void procesoB() {
+    int pid;
 
     file = fopen(FILENAME, "w+");
 
@@ -48,36 +73,20 @@ void procesoB() {
         exit(1);
     }
 
-    for(p = 0; p < 3; ++p) {
-        int pid;
+    pid = fork();
 
-        pid = fork();
+    if(pid == 0) {
+        procesoA();
+    } else {
+        sleep(1);
 
-        if(pid == 0) {
-            procesoA();
-        } else {
-            sleep(1);
+        signal(SIGALRM, handler_alarma);
 
-            for(;;) {
-                char* ret = fgets(buf, sizeof(buf), file);
-
-                if(ret == NULL) {
-                    printf("ret == NULL\n");
-                    break;
-                }
-
-                printf("Leyendo %s", buf);
-
-                if(strcmp(buf, "FIN") == 0) {
-                    break;
-                }
-
-                sleep(1);
-            }
+        for(;;) {
+            alarm(1);
+            pause();
         }
     }
-
-    fclose(file);
 }
 
 int main() {
