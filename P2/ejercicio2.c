@@ -1,3 +1,13 @@
+/**
+ * @file ejercicio2.c
+ * @brief Ejercicio 2: Escritura en pantalla de 2 hilos a la vez
+ *
+ * @author Dario Adrian Barroso
+ * @author Angel Manuel Martin Canto
+ * @date 2016-3-04
+ */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

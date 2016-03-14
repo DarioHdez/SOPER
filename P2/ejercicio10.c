@@ -1,3 +1,12 @@
+/**
+ * @file ejercicio10.c
+ * @brief Ejercicio 10: Lectura de un fichero con procesos, señales y alarmas 
+ *
+ * @author Dario Adrian Barroso
+ * @author Angel Manuel Martin Canto
+ * @date 2016-3-10
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

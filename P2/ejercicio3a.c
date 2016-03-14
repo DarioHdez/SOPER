@@ -1,3 +1,12 @@
+/**
+ * @file ejercicio3a.c
+ * @brief Ejercicio 3a: Prueba el tiempo de 100 procesos escribiendo un numero (Creacion, escritura y finalizacion)
+ *
+ * @author Dario Adrian Barroso
+ * @author Angel Manuel Martin Canto
+ * @date 2016-3-04
+ */
+
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>

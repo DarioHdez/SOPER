@@ -1,3 +1,12 @@
+/**
+ * @file ejercicio3b.c
+ * @brief Ejercicio 3b: Prueba el tiempo de 100 hilos escribiendo un numero (Creacion, escritura y finalizacion)
+ *
+ * @author Dario Adrian Barroso
+ * @author Angel Manuel Martin Canto
+ * @date 2016-3-04
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

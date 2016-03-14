@@ -1,3 +1,12 @@
+/**
+ * @file ejercicio4.c
+ * @brief Ejercicio 4: Multiplica 2 matrices de 3x3 en 2 hilos
+ *
+ * @author Dario Adrian Barroso
+ * @author Angel Manuel Martin Canto
+ * @date 2016-3-09
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

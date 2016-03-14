@@ -1,3 +1,12 @@
+/**
+ * @file ejercicio8.c
+ * @brief Ejercicio 8: Recepción-Envío de señales consecutivos
+ *
+ * @author Dario Adrian Barroso
+ * @author Angel Manuel Martin Canto
+ * @date 2016-3-04
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

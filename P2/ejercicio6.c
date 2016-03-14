@@ -1,3 +1,12 @@
+/**
+ * @file ejercicio6.c
+ * @brief Ejercicio 6: Introducción a señales: Kill
+ *
+ * @author Dario Adrian Barroso
+ * @author Angel Manuel Martin Canto
+ * @date 2016-3-09
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,8 +24,6 @@ int hijo() {
 
     return 0;
 }
-
-
 
 int main() {
     int pid;
