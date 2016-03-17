@@ -1,0 +1,526 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass scrreprt
+\use_default_options true
+\maintain_unincluded_children false
+\language spanish
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry true
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 1cm
+\topmargin 2cm
+\rightmargin 1cm
+\bottommargin 2cm
+\headheight 1cm
+\headsep 1cm
+\footskip 1cm
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation skip
+\defskip medskip
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+SOPER: Memoria práctica 2
+\end_layout
+
+\begin_layout Author
+Darío Adrián Hernández Barroso 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+
+\backslash
+
+\end_layout
+
+\end_inset
+
+ Ángel Manuel Martín Canto
+\end_layout
+
+\begin_layout Date
+2016-03-18
+\end_layout
+
+\begin_layout Section*
+Hilos
+\end_layout
+
+\begin_layout Subsection*
+Ejercicio 3: Comparación de velocidad entre procesos e hilos
+\end_layout
+
+\begin_layout Standard
+Creamos dos programas(ejercicio3a y ejercicio3b) que usan, respectivamente,
+ procesos e hilos.
+ Los imprimen por pantalla en paralelo 100 números aleatorios.
+\end_layout
+
+\begin_layout Standard
+El resultado de la ejecución en varias maquinas es que la versión con procesos
+ en ligeramente más rápida que la versión con hilos.
+ En un principio esto nos resulto sorprendente dado que los procesos suponen
+ más sobrecarga de memoria.
+ Las explicaciones que hemos encontrado son:
+\end_layout
+
+\begin_layout Itemize
+El ejercicio no hace un uso intensivo de memoria
+\end_layout
+
+\begin_layout Itemize
+Midiendo el tiempo con el comando de shell 
+\begin_inset Quotes eld
+\end_inset
+
+time
+\begin_inset Quotes erd
+\end_inset
+
+ hemos descubierto que la utilización de CPU de la versión con procesos
+ ronda el 400%(esto es, usa 4 nucleos) mientras que la de hilos esta en
+ el 200%.
+ Estas medidas se han realizado en una maquina con kernel Linux 3.16 y procesador
+ Intel i7 de 8 núcleos lógicos.
+ Es posible que el planificador del sistema operativo trate distinto a hilos
+ y procesos, especialmente cuando tienen una duración tan reducida.
+\end_layout
+
+\begin_layout Subsection*
+Ejercicio 4: Paso de parámetros en hilos
+\end_layout
+
+\begin_layout Standard
+La estrategia que hemos seguido en este ejercicio es crear una estructura
+ con todo la información relevante para cada hilo y pasar punteros a esa
+ estructura como argumento a los hilos.
+\end_layout
+
+\begin_layout Section*
+Señales
+\end_layout
+
+\begin_layout Subsection*
+Ejercicio 6: Terminación mediante señales
+\end_layout
+
+\begin_layout Standard
+Poco hay que reseñar de este ejercicio excepto que no hace falta proveer
+ de un manejador especifico para la señal de terminación.
+\end_layout
+
+\begin_layout Subsection*
+Ejercicio 8: Envío de señales por un árbol de procesos
+\end_layout
+
+\begin_layout Standard
+En este ejercicio usamos las señales SIGUSR1 y SIGUSR2 para las que proveemos
+ manejadores propios.
+ Hemos intentado separar claramente el código del padre raíz, de los hijos
+ intermedios y del último hijo.
+ También hemos comprobado que no se generen procesos huérfanos.
+ Una ejecución normal del programa da la siguiente salida:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+lstparams "basicstyle={\ttfamily},tabsize=4"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Ultimo hijo envia SIGUSR1
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@5244, recibe SIGUSR1
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@5243, recibe SIGUSR1
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@5242, recibe SIGUSR1
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@5241, recibe SIGUSR1
+\end_layout
+
+\begin_layout Plain Layout
+
+Padre raiz recibe SIGUSR1
+\end_layout
+
+\begin_layout Plain Layout
+
+Padre raiz envia SIGUSR2
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@5241, recibe SIGUSR2
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@5242, recibe SIGUSR2
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@5243, recibe SIGUSR2
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@5244, recibe SIGUSR2
+\end_layout
+
+\begin_layout Plain Layout
+
+Ultimo hijo recibe SIGUSR2
+\end_layout
+
+\begin_layout Plain Layout
+
+Ultimo hijo envia SIGUSR2
+\end_layout
+
+\begin_layout Plain Layout
+
+Padre raiz recibe SIGUSR2
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@5241, recibe SIGTERM
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@5242, recibe SIGTERM
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@5243, recibe SIGTERM
+\end_layout
+
+\begin_layout Plain Layout
+
+Hijo@5244, recibe SIGTERM
+\end_layout
+
+\begin_layout Plain Layout
+
+Ultimo hijo recibe SIGTERM
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+Ejercicio 10:
+\end_layout
+
+\begin_layout Standard
+Este ejercicio combina técnicas de todos los anteriores.
+ Hacemos notar que a la hora de realizar cualquier espera usamos la señal
+ de alarma en vez de la función sleep.
+ Una salida normal del programa es:
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Creando proceso
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo LEE
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo HASTA
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo QUE
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo PROCESO
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo UN
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo UN
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo CADENA
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo LEE
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo FICHERO
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo LEE
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo EN
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo PROCESO
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo ESCRIBE
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo QUE
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo ESCRIBE
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo CADENA
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo PROCESO
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo PROCESO
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo FIN
+\end_layout
+
+\begin_layout Plain Layout
+
+Recreando proceso
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo HASTA
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo UN
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo A
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo PROCESO
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo ESCRIBE
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo HASTA
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo EL
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo LEE
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo EL
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo PROCESO
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo ESCRIBE
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo HASTA
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo LEE
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo UN
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo FIN
+\end_layout
+
+\begin_layout Plain Layout
+
+Recreando proceso
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo A
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo A
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo PROCESO
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo LA
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo FICHERO
+\end_layout
+
+\begin_layout Plain Layout
+
+Leyendo FIN
+\end_layout
+
+\begin_layout Plain Layout
+
+Recreando proceso
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

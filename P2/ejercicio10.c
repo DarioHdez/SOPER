@@ -59,6 +59,7 @@ void handler_alarma() {
     if(ret == NULL || strcmp(buf, "FIN\n") == 0) {
         int pid;
 
+        printf("Recreando proceso\n");
         pid = fork();
 
         if(++p >= 3) {
@@ -82,6 +83,7 @@ void procesoB() {
         exit(1);
     }
 
+    printf("Creando proceso\n");
     pid = fork();
 
     if(pid == 0) {
