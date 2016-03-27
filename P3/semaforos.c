@@ -1,30 +1,28 @@
 /**
- * @file ejercicio4.c 
+ * @file semaforos.c 
  * @brief Implementa los semaforos
 
  * @author Darío Adrián Hernández
  * @author Ángel Manuel Martín 
- * @date 2016/03/26
+ * @date 2016/03/27
 */
 
 #include "semaforos.h"
 
+int Crear_Semaforo(key_t key, int size, int *semid){
+  if (key < 0 || size < 1 || !semid)
+    return ERROR;
+  
+  /*No se diferenciar cuando ya estaba creado de cuando no, edit: Puede que este solucionado*/
+  /*Me lio con el puntero *semid, porque semget devuelve un int, ¿es * o &?*/
+  *semid = semget(key,size, IPC_CREAT | IPC_EXCL | SHM_R | SHM_W);  
+  if ((*semid == -1) && errno == EEXIST)
+		semid = semget(SEMKEY,N_SEMAFOROS ,SHM_R|SHM_W);
 
-int Inicializar_Semaforo(int semid, unsigned short* array){
-  if (semid == -1)
-		return ERROR;
-	
-  int i = 0;
-  
-  /*Mientras el array tenga numeros*/
-  /*En teoria array tiene que ser una estructura, asi que no 
-    estoy seguro de que esto funcione*/
-  while (array[i] != NULL) {  
-    if (semctl(semid,i, SETVAL, array[i]) == -1)
-      return ERROR; 	
-	}
-  
-  return OK;
+  if (*semid == -1)
+    return ERROR;  
+
+  return OK;  
 }
 
 int Borrar_Semaforo(int semid){
@@ -35,16 +33,19 @@ int Borrar_Semaforo(int semid){
   return semctl(semid,0,IPC_RMID);
 }
 
-int Crear_Semaforo(key_t key, int size, int *semid){
-  if (key < 0 || size < 1)
-    return ERROR;
+int Inicializar_Semaforo(int semid, unsigned short* array){	
+  int i = 0;
   
-  /*No se diferenciar cuando ya estaba creado de cuando no*/
-  &semid = semget(key,size, IPC_CREAT | IPC_EXCL | SHM_R | SHM_W);  
-  if (&semid == -1)
-    return ERROR;  
-
-  return OK;  
+  /*Mientras el array tenga numeros*/
+  /*En teoria array tiene que ser una estructura, asi que no 
+    estoy seguro de que esto funcione*/
+  /*while (array[i] != NULL) {  
+    if (semctl(semid,i, SETVAL, array[i]) == -1)
+      return ERROR; 	
+	}*/
+  array = (unsigned short *)malloc(sizeof(short)*N_SEMAFOROS);
+  
+  return OK;
 }
 
 int Down_Semaforo(int semid, int num_sem, int undo){

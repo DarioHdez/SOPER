@@ -23,24 +23,11 @@
 #define OK 0
 #define ERROR 1
 
-/**
-  * @funcion Inicializar_Semaforo
-  * @date 2016/03/26
-  * @brief Inicializa los semaforos indicados.
-  * @param int semid: Identificador del semaforo.
-  * @param unsigned short *array: Valores iniciales.
-  * @return int: OK si todo fue correcto, ERROR en caso de error.
-*/
-int Inicializar_Semaforo(int semid, unsigned short* array);
-
-/**
-  * @funcion Borrar_Semaforo
-  * @date 2016/03/26
-  * @brief borra un semaforo.
-  * @param int semid: Identificador del semaforo.
-  * @return int: OK si todo fue correcto, ERROR en caso de error.
-*/
-int Borrar_Semaforo(int semid);
+union semun {
+	int val;
+	struct semid_ds *semstat;
+	unsigned short *array;
+}arg;
 
 /**
   * @funcion Crear_Semaforo
@@ -52,6 +39,25 @@ int Borrar_Semaforo(int semid);
   * @return int* semid: identificador del semaforo creado
 */
 int Crear_Semaforo(key_t key, int size, int *semid);
+
+/**
+  * @funcion Borrar_Semaforo
+  * @date 2016/03/26
+  * @brief borra un semaforo.
+  * @param int semid: Identificador del semaforo.
+  * @return int: OK si todo fue correcto, ERROR en caso de error.
+*/
+int Borrar_Semaforo(int semid);
+
+/**
+  * @funcion Inicializar_Semaforo
+  * @date 2016/03/26
+  * @brief Inicializa los semaforos indicados.
+  * @param int semid: Identificador del semaforo.
+  * @param unsigned short *array: Valores iniciales.
+  * @return int: OK si todo fue correcto, ERROR en caso de error.
+*/
+int Inicializar_Semaforo(int semid, unsigned short* array);
 
 /**
   * @funcion Down_Semaforo
