@@ -47,11 +47,12 @@ int main (){
 	sem_oper.sem_op = -1;  				/* Decrementar en 1 el valor del semáforo */
 	sem_oper.sem_flg = SEM_UNDO;	/* Para evitar interbloqueos si un proceso acaba inesperadamente */
 	
-	semop (semid, &sem_oper, 1);
+	semop(semid, &sem_oper, 1);
 	
 	sem_oper.sem_num = 1;					/* Actuamos sobre el semáforo 1 de la lista */
 	sem_oper.sem_op = 1;					/* Incrementar en 1 el valor del semáforo */
 	sem_oper.sem_flg = SEM_UNDO;	/* No es necesario porque ya se ha hecho anteriormente */
+	
 	semop (semid, &sem_oper, 1);
 
 	/** Veamos los valores de los semáforos*/

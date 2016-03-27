@@ -8,7 +8,7 @@ CC = gcc
 CFLAGS = -Wall -Werror
 LDFLAGS = 
 
-EXE = ejercicio2
+EXE = ejercicio2 ejercicio3
 
 all: $(EXE)
  

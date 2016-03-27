@@ -20,6 +20,8 @@
 #include <sys/shm.h>
 #include <stdlib.h>
 
+#define OK 0
+#define ERROR 1
 
 /**
   * @funcion Inicializar_Semaforo
@@ -83,7 +85,6 @@ int DownMultiple_Semaforo(int semid, int size, int undo, int* active);
   * @param int undo: Flag de modo persistente pese a finalización abrupta.
   * @return int: OK si todo fue correcto, ERROR en caso de error.
 */
-
 int Up_Semaforo(int id, int num_sem, int undo);
 
 /**
