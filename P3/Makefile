@@ -8,7 +8,7 @@ CC = gcc
 CFLAGS = -Wall -Werror
 LDFLAGS = 
 
-EXE = ejercicio2 ejercicio3
+EXE = ejercicio2 ejercicio3 ejercicio5
 
 all: $(EXE)
  
@@ -29,4 +29,11 @@ $(EXE): % : %.o
 	@echo "# Depende de $^"
 	@echo "# Ha cambiado $<"
 	$(CC) $(CFLAGS) -c $<
+
+ejercicio5 : ejercicio5.o semaforos.o
+	@echo "#---------------------------"
+	@echo "# Generando $@ "
+	@echo "# Depende de $^"
+	@echo "# Ha cambiado $<"
+	$(CC) $(CFLAGS) -o $@ semaforos.o $@.o $(LDFLAGS)
 

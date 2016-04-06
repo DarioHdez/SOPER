@@ -8,7 +8,7 @@
 */
 
 
-#include "semaforos.c"
+#include "semaforos.h"
 
 #define SEMKEY 75770
 #define N_SEMAFOROS 2
@@ -19,12 +19,17 @@ int main() {
   int semid;
 
   /* Para operaciones up y down sobre semáforos */
-	arg* maybe;
+  // int* maybe;
   
   /**Creamos una lista o conjunto con dos semáforos*/
-	if (Crear_semaforo(SEMKEY,N_SEMAFOROS, &semid) == ERROR)
+  if (Crear_Semaforo(SEMKEY,N_SEMAFOROS, &semid) == ERROR) {
     return 1;
-  
+  }	
+
+  if (Borrar_Semaforo(semid) == -1) {
+    return 1;
+  }
+
   /*Llamada a la inicialización, no estoy seguro de como se hace, stop*/
   return 0;
 }

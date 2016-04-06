@@ -7,8 +7,8 @@
  * @date 2016/03/26
 */
 
-#ifndef GAME_H
-#define GAME_H
+#ifndef SEMAFOROS_H
+#define SEMAFOROS_H
 
 #include <stdio.h>
 #include <sys/types.h>
