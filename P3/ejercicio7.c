@@ -13,32 +13,29 @@
 
 int flujo_de_coches;
 
-void coche(int sema_dir, int sema_glo, int sentido) {
+void coche(int semid, int sema_dir, int sema_glo, int sentido) {
 	sleep(rand() % 10);
 
 
-	down(sema_dir);
+	Down_Semaforo(semid,sema_dir, 1):
+		
 	if (flujo_de_coches == 0)
-		down(sema_glo);
+		Down_Semaforo(semid,sema_glo, 1);
 
 	flujo_de_coches += sentido;
 
-	up(sema_dir);
-
-
+	Up_Semaforo(semid,sema_dir,1);
 
 	sleep(1);
 
-
-
-	down(sema_dir);
+	Down_Semaforo(semid,sema_dir,1);
 
 	flujo_de_coches -= sentido;
 
 	if (flujo_de_coches == 0)
-		up(sema_glo);
+		Up_Semaforo(semid,sema_glo,1);
 
-	up(sema_dir);
+	Up_Semaforo(semid,sema_dir,1);
 }
 
 int main() {
@@ -50,7 +47,7 @@ int main() {
 
     flujo_de_coches = 0;
 
-    
+    /*Hay que crear los hilosmiau*/
 
 
     if (Borrar_Semaforo(semid) == -1) {
