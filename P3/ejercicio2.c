@@ -1,3 +1,12 @@
+/**
+ * @file ejercicio2.c
+ * @brief Memoria compartido sin sincronización. Condición de carrera.
+
+ * @author Darío Adrián Hernández
+ * @author Ángel Manuel Martín
+ * @date 2016/03/27
+ */
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -22,7 +31,6 @@ info_t* shared_info;
 void hijo() {
     int key, id_zone;
     info_t* my_info;
-    /*char mipid[80];*/
 
     key = ftok(FILEKEY, KEY);
     if (key == -1) {
@@ -41,26 +49,20 @@ void hijo() {
         fprintf(stderr, "Error with shmat\n");
         exit(0);
     }
-    /*if (montar_mem_comp(0) == -1) {
-        fprintf(stderr, "Error montando memoria en hijo\n");
-        exit(1);
-       }*/
 
     sleep(getpid()%20);
 
     /*printf("Introduzca nombre: ");
        scanf("%s", my_info->nombre);*/
-    /*strcpy(mipid,(char*)getppid*/
     strcpy(my_info->nombre, "domo");
 
     int local_id = my_info->id; //NO ES ATOMICO
-    sleep(1);                   //este sleep hace que se vea que puede ser interrumpido a la mitad
+    sleep(1);                   //este sleep hace que la suma pueda ser interrumpida a la mitad
     my_info->id = local_id + 1; //NO ES ATOMICO
 
     kill(getppid(), SIGUSR1);
 
     shmdt(my_info);
-    //shmdt(shared_info);
 
     exit(0);
 }
