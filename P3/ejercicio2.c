@@ -20,16 +20,39 @@ typedef struct info_ {
 info_t* shared_info;
 
 void hijo() {
+    int key, id_zone;
+    info_t* my_info;
+    /*char mipid[80];*/
+
+    key = ftok(FILEKEY, KEY);
+    if (key == -1) {
+        fprintf(stderr, "Error with key\n");
+        exit(0);
+    }
+
+    id_zone = shmget(key, sizeof(info_t), IPC_EXCL | SHM_R | SHM_W);
+    if (id_zone == -1) {
+        fprintf(stderr, "Error with shmget\n");
+        exit(0);
+    }
+
+    my_info = (info_t*)shmat(id_zone, NULL, 0);
+    if (my_info == NULL) {
+        fprintf(stderr, "Error with shmat\n");
+        exit(0);
+    }
     /*if (montar_mem_comp(0) == -1) {
         fprintf(stderr, "Error montando memoria en hijo\n");
         exit(1);
     }*/
 
-    sleep(rand() % 5);
+    sleep(rand(getpid())%4);
 
     /*printf("Introduzca nombre: ");
-    scanf("%s", shared_info->nombre);*/
-    shared_info->id++;
+    scanf("%s", my_info->nombre);*/
+    /*strcpy(mipid,(char*)getppid*/
+    strcpy(my_info->nombre, "domo");
+    my_info->id++;
 
     kill(getppid(), SIGUSR1);
 
@@ -87,7 +110,7 @@ int main(int argc, char* argv[]) {
     shared_info->id = 0;
 
     for(p = 0; p < num_procs; ++p) {
-        if(!fork()) {
+        if(fork() == 0) {
             hijo();
             exit(0);
         }
