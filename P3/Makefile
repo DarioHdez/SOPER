@@ -11,11 +11,17 @@ LDFLAGS = -pthread
 EXE = ejercicio2 ejercicio3
 SEM_EXE = ejercicio5 ejercicio5b ejercicio6 ejercicio7
 
-all: $(EXE) $(SEM_EXE)
+all: $(EXE) $(SEM_EXE) doc
 
 .PHONY: clean
-clean:
+clean: clean_doc
 	rm -f *.o core $(EXE) $(SEM_EXE)
+
+clean_doc:
+	rm -rf doc
+
+doc: clean_doc
+	doxygen Doxyfile
 
 $(EXE): % : %.o
 	@echo "#---------------------------"
