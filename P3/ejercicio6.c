@@ -10,7 +10,7 @@
 #include "semaforos.h"
 
 /*Variables para los semaforos*/
-#define SEMKEY 66666
+#define SEMKEY 88888
 #define SEMA_GLO 0
 #define SEMA_IZQ 1
 #define SEMA_DER 2
@@ -54,22 +54,28 @@ void coche(int id, int semid, int* flujo_de_coches, int sentido) {
 
 
 void* nuevo_proceso() {
-	int semid, flujo_de_coches, key id_zone;
+	int semid, *flujo_de_coches, key, id_zone;
 
     int id = getpid();
-    /*Añadir la memoria compartida*/
 
+    /*Pedimos el semaforo*/
+    if (Crear_Semaforo(SEMKEY, 3, &semid) == ERROR) {
+        exit(0);
+    }
+
+    /*Añadir la memoria compartida*/
     key = ftok(FILEKEY, KEY);
     if (key == -1) {
         fprintf(stderr, "Error with key\n");
         exit(0);
     }
 
-    id_zone = shmget(key, sizeof(info_t), | IPC_EXCL | SHM_R | SHM_W);
+    id_zone = shmget(key, sizeof(int*), IPC_EXCL | SHM_R | SHM_W);
     if (id_zone == -1) {
-        fprintf(stderr, "Error with shmget\n");
+        fprintf(stderr, "Error with shmget 2\n");
         exit(0);
-
+    }
+        
 	flujo_de_coches = (int*)shmat(id_zone, NULL, 0);
     if (flujo_de_coches == NULL) {
         fprintf(stderr, "Error with shmat\n");
@@ -79,13 +85,13 @@ void* nuevo_proceso() {
     coche(id, semid, &flujo_de_coches, id % 2 ? +1 : -1);
 
     /*Salir de la memoria compartida*/
-    shmdt(my_info);
+    shmdt(flujo_de_coches);
 
-    pthread_exit(NULL);
+    exit(0);
 }
 
-int main(int ) {
-    int semid, id_zone, key, flujo_de_coches;
+int main() {
+    int semid, id_zone, key, *flujo_de_coches;
     int i;
 
     key = ftok(FILEKEY, KEY);
@@ -94,9 +100,9 @@ int main(int ) {
         exit(0);
     }
 
-    id_zone = shmget(key, sizeof(info_t), IPC_CREAT | IPC_EXCL | SHM_R | SHM_W);
+    id_zone = shmget(key, sizeof(int*), IPC_CREAT | IPC_EXCL | SHM_R | SHM_W);
     if (id_zone == -1) {
-        fprintf(stderr, "Error with shmget\n");
+        fprintf(stderr, "Error with shmget 1\n");
         exit(0);
     }
 
@@ -122,7 +128,7 @@ int main(int ) {
 
     if (Borrar_Semaforo(semid) == -1) {
         return 1;
-    }
+    }	
 
     return 0;
 }
