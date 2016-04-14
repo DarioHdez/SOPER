@@ -44,15 +44,18 @@ void hijo() {
     /*if (montar_mem_comp(0) == -1) {
         fprintf(stderr, "Error montando memoria en hijo\n");
         exit(1);
-    }*/
+       }*/
 
-    sleep(rand(getpid())%4);
+    sleep(getpid()%4);
 
     /*printf("Introduzca nombre: ");
-    scanf("%s", my_info->nombre);*/
+       scanf("%s", my_info->nombre);*/
     /*strcpy(mipid,(char*)getppid*/
     strcpy(my_info->nombre, "domo");
-    my_info->id++;
+
+    int local_id = my_info->id; //NO ES ATOMICO
+    sleep(1);                   //este sleep hace que se vea que puede ser interrumpido a la mitad
+    my_info->id = local_id + 1; //NO ES ATOMICO
 
     kill(getppid(), SIGUSR1);
 
