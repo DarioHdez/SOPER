@@ -9,7 +9,7 @@ CFLAGS = -Wall
 LDFLAGS = -pthread
 
 EXE = ejercicio2 ejercicio3
-SEM_EXE = ejercicio5 ejercicio5b ejercicio7
+SEM_EXE = ejercicio5 ejercicio5b ejercicio6 ejercicio7
 
 all: $(EXE) $(SEM_EXE)
 
