@@ -6,10 +6,10 @@
 CC = gcc
 #CFLAGS = -Wall -g -Werror
 CFLAGS = -Wall
-LDFLAGS =
+LDFLAGS = -pthread
 
 EXE = ejercicio2 ejercicio3
-SEM_EXE = ejercicio5 ejercicio5b
+SEM_EXE = ejercicio5 ejercicio5b ejercicio7
 
 all: $(EXE) $(SEM_EXE)
 
