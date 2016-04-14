@@ -28,12 +28,13 @@ int semid;
 #define SEMA_GLO 0
 #define SEMA_IZQ 1
 #define SEMA_DER 2
-#define NUM_HILOS 10
+#define NUM_HILOS 100
+#define SLEEP_MAXIMO 20
 
 void coche(int id, int semid, int* flujo_de_coches, int sentido) {
     int sema_dir = sentido == -1 ? SEMA_IZQ : SEMA_DER;
 
-    sleep(rand() % 10);
+    sleep(rand() % SLEEP_MAXIMO);
 
     Down_Semaforo(semid, sema_dir, 1);
 
