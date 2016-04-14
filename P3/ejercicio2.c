@@ -46,7 +46,7 @@ void hijo() {
         exit(1);
        }*/
 
-    sleep(getpid()%4);
+    sleep(getpid()%20);
 
     /*printf("Introduzca nombre: ");
        scanf("%s", my_info->nombre);*/
@@ -59,6 +59,7 @@ void hijo() {
 
     kill(getppid(), SIGUSR1);
 
+    shmdt(my_info);
     //shmdt(shared_info);
 
     exit(0);
