@@ -6,15 +6,16 @@
 CC = gcc
 CFLAGS = -Wall -g -Werror
 #CFLAGS = -Wall
-LDFLAGS =
+LDFLAGS = -pthread
 
 EXE = cadena_montaje
+SEM_EXE = final
 
-all: $(EXE) doc
+all: $(EXE) $(SEM_EXE)
 
 .PHONY: clean
 clean: clean_doc
-	rm -f *.o core $(EXE)
+	rm -f *.o core $(EXE) $(SEM_EXE)
 
 clean_doc:
 	rm -rf doc
@@ -35,3 +36,11 @@ $(EXE): % : %.o
 	@echo "# Depende de $^"
 	@echo "# Ha cambiado $<"
 	$(CC) $(CFLAGS) -c $<
+
+$(SEM_EXE): % : %.o semaforos.o
+	@echo "#---------------------------"
+	@echo "# Generando $@ "
+	@echo "# Depende de $^"
+	@echo "# Ha cambiado $<"
+	$(CC) $(CFLAGS) -o $@ semaforos.o $@.o $(LDFLAGS)
+

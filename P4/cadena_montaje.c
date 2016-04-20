@@ -22,7 +22,7 @@
 #define KEY1 1234
 #define KEY2 1235
 
-#define PERMS 0666
+#define PERMS 0600
 
 #define BLOCK_SIZE 300
 
@@ -92,7 +92,7 @@ int procesoC(char *write_file) {
         bytes_read = check_err("msgrcv(msq2_id, buf, BLOCK_SIZE, 0, 0)",
                                msgrcv(msq2_id, buf, BLOCK_SIZE, 0, 0));
 
-        write(fd, buf, bytes_read);
+        write(fd, buf + sizeof(long), bytes_read);
     } while(bytes_read);
 
     free(buf);
