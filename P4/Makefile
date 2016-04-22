@@ -4,7 +4,7 @@
 #
 
 CC = gcc
-CFLAGS = -Wall -g -Werror
+CFLAGS = -Wall -g
 #CFLAGS = -Wall
 LDFLAGS = -pthread
 
@@ -15,7 +15,7 @@ all: $(EXE) $(SEM_EXE)
 
 .PHONY: clean
 clean: clean_doc
-	rm -f *.o core $(EXE) $(SEM_EXE)
+	rm -f *.o core $(EXE) $(SEM_EXE) semaforos.o
 
 clean_doc:
 	rm -rf doc

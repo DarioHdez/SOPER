@@ -22,12 +22,12 @@
 int Operar_Semaforo(int semid, int size, int undo, int* active, int sum);
 
 int Crear_Semaforo(key_t key, int size, int *semid){
-  if (key < 0 || size < 1 || !semid)
+  if (!semid)
     return ERROR;
   
   /*No se diferenciar cuando ya estaba creado de cuando no, edit: Puede que este solucionado*/
   /*Me lio con el puntero *semid, porque semget devuelve un int, ¿es * o &?*/
-  *semid = semget(key, size, IPC_CREAT | IPC_EXCL | SHM_R | SHM_W);  
+  *semid = semget(key, size, IPC_CREAT | SHM_R | SHM_W);  
   if ((*semid == -1) && errno == EEXIST) {
 		*semid = semget(key, size, SHM_R|SHM_W);
   }
