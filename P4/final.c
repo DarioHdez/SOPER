@@ -21,14 +21,17 @@
 
 #define BUF_SIZE 1024
 
-#define CHECK(f) (check_err(#f, __FILE__, __LINE__, (f)))
-#define CHECK_GOTO(val, g) { if (CHECK(val) == -1) { goto g; } }
+#define CHECK(f) (check_err(#f, __FILE__, __LINE__, (f), 1))
+#define CHECK_GOTO(val, g) { if (check_err(#val, __FILE__, __LINE__, (val), 0) == -1) { goto g; } }
 
 #define FILEKEY "/bin/cat"
 #define KEY_SEM 24667
 #define BASEKEY_SHM 34667
 #define BASEKEY_MSQ 44667
 #define MSQ_PERMS 0660
+
+#define SIZEOF_AULA(tamanio_aula) (sizeof(aula_t) + (tamanio_aula)*sizeof(asiento_t))
+#define NUMERO_SEMAFOROS (numero_alumnos*2)
 
 typedef struct {
     int ocupado;
@@ -54,7 +57,7 @@ typedef struct {
     asiento_t asientos[1];
 } aula_t;
 
-int check_err(const char *fname, char *file, int line, int val);
+int check_err(const char *fname, char *file, int line, int val, int exit_on_fail);
 void* check_mem(void* mem);
 
 int alumno_lock(alumno_state_t *state);
@@ -96,30 +99,32 @@ int main() {
 
     estado_alumno = (alumno_state_t*)check_mem(malloc(numero_alumnos*sizeof(alumno_state_t)));
 
-    CHECK_GOTO(Crear_Semaforo(clave_sem, numero_alumnos*2, &semid), fail_sem);
-    unsigned short* inicializacion = (unsigned short*)check_mem(alloca(numero_alumnos*sizeof(unsigned short)));
+    CHECK_GOTO(Crear_Semaforo(clave_sem, NUMERO_SEMAFOROS, &semid), fail_sem);
+    unsigned short* inicializacion = (unsigned short*)check_mem(malloc(NUMERO_SEMAFOROS*sizeof(unsigned short)));
     
-    for (i = 0; i < numero_alumnos*2; ++i) {
+    for (i = 0; i < NUMERO_SEMAFOROS; ++i) {
         inicializacion[i] = i % 2; // Sync - Mutex
     }
 
     for (i = 0; i < numero_alumnos; ++i) {
-        estado_alumno[i].num_sem_sync = 2*i;
-        estado_alumno[i].num_sem_mutex = 2*i + 1;
+        estado_alumno[i].num_sem_sync = (2*i);
+        estado_alumno[i].num_sem_mutex = (2*i) + 1;
         estado_alumno[i].esperando = 1;
     }
 
     CHECK(Inicializar_Semaforo(semid, inicializacion));
 
+    free(inicializacion);
+
     int pid;
     for (i = 0; i < NUM_AULAS; ++i) {
         clave_aula[i] = CHECK(ftok(FILEKEY, BASEKEY_SHM + i));
-        shm_aula[i] = shmget(clave_aula[i], sizeof(int) + tamanio_aula[i]*sizeof(asiento_t), IPC_CREAT | IPC_EXCL | SHM_R | SHM_W);
+        shm_aula[i] = shmget(clave_aula[i], SIZEOF_AULA(tamanio_aula[i]), IPC_CREAT | IPC_EXCL | SHM_R | SHM_W);
         CHECK_GOTO(shm_aula[i], fail_shm);
         mem_aula[i] = (aula_t*)shmat(shm_aula[i], NULL, 0);
         if (mem_aula[i] == (void*)-1) { fprintf(stderr, "Fallo en shmat\n"); exit(1); }
         mem_aula[i]->capacidad = tamanio_aula[i];
-        memset(mem_aula[i]->asientos, 0, tamanio_aula[i]*sizeof(asiento_t)); // Los asientos empiezan vacios
+        memset(mem_aula[i]->asientos, 0, SIZEOF_AULA(tamanio_aula[i])); // Los asientos empiezan vacios
 
         for (j = 0; j < NUM_PROFS_POR_AULA; ++j) {
             clave_profesor[i][j] = CHECK(ftok(FILEKEY, BASEKEY_MSQ + i*NUM_PROFS_POR_AULA + j));
@@ -135,8 +140,8 @@ int main() {
  
     for (i = 0; i < numero_alumnos; ++i) {
         estado_alumno[i].esperando = 1;
-        // estado_alumno[i].aula = i % NUM_AULAS;
-        estado_alumno[i].aula = 0;
+        estado_alumno[i].aula = i % NUM_AULAS;
+        // estado_alumno[i].aula = 0;
 
         CHECK(pthread_create(&estado_alumno[i].th, NULL, alumno, &estado_alumno[i]));
     }
@@ -150,7 +155,7 @@ int main() {
 
             cm.type = 1;
 
-            alumno_lock(&estado_alumno[i]);
+            CHECK(alumno_lock(&estado_alumno[i]));
                 if(estado_alumno[i].esperando) {
                     cm.th = estado_alumno[i].th;
                     cm.num_sem_sync = estado_alumno[i].num_sem_sync;
@@ -160,7 +165,7 @@ int main() {
                     aula = estado_alumno[i].aula;
                     snd = 1;
                 }
-            alumno_unlock(&estado_alumno[i]);
+            CHECK(alumno_unlock(&estado_alumno[i]));
 
             if (snd) {
                 CHECK(msgsnd(msq_profesor[aula][0], &cm, sizeof(coloca_msg_t) - sizeof(long), 0));
@@ -233,7 +238,7 @@ int alumno_despertar(alumno_state_t *state) {
 void* alumno(void *arg) {
     alumno_state_t *estado = (alumno_state_t*)arg;
     
-    int id = estado->num_sem_sync;
+    int id = estado->num_sem_sync/2;
 
     CHECK(alumno_lock(estado));
         printf("alumno %d: Probando aula %d\n", id, estado->aula);
@@ -241,9 +246,9 @@ void* alumno(void *arg) {
 
     CHECK(alumno_esperar(estado));
 
-    alumno_lock(estado);
+    CHECK(alumno_lock(estado));
         estado->esperando = 0;
-    alumno_unlock(estado);
+    CHECK(alumno_unlock(estado));
 
     printf("alumno %d: Espera terminada\n", id);
 
@@ -273,7 +278,7 @@ int profesor(int aula, key_t clave_sem, key_t clave_aula, key_t clave_msq) {
 
         coloca_msg_t *cm = (coloca_msg_t*)buf;
 
-        printf("Profe: Colocando alumno %d\n", cm->num_sem_sync);
+        printf("Profe: Colocando alumno %d\n", cm->num_sem_sync/2);
         
         int i;
         for (i = 0; i < mem_aula->capacidad; ++i) {
@@ -292,15 +297,23 @@ int profesor(int aula, key_t clave_sem, key_t clave_aula, key_t clave_msq) {
     return 0;
 }
 
-int check_err(const char *fname, char *file, int line, int val) {
+int check_err(const char *fname, char *file, int line, int val, int exit_on_fail) {
     if (val == -1) {
         char err_desc[256];
         if (strerror_r(errno, err_desc, sizeof(err_desc))) {
             fprintf(stderr, "%s@%d PID:%d :: Fallo de %s: Error obteniendo descripcion de error\n", file, line, getpid(), fname);
-            exit(1);
+            if (exit_on_fail) {
+                exit(1);
+            } else {
+                return val;
+            }
         }
         fprintf(stderr, "%s@%d PID:%d :: Fallo de %s: errno = %s\n", file, line, getpid(), fname, err_desc);
-        exit(1);
+        if (exit_on_fail) {
+            exit(1);
+        } else {
+            return val;
+        }
     }
 
     return val;
