@@ -30,7 +30,7 @@ $(EXE): % : %.o
 	@echo "# Ha cambiado $<"
 	$(CC) $(CFLAGS) -o $@ $@.o $(LDFLAGS)
 
-%.o : %.c
+%.o : %.c %.h
 	@echo "#---------------------------"
 	@echo "# Generando $@"
 	@echo "# Depende de $^"

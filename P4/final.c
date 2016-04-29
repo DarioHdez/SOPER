@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 #include <pthread.h>
 
@@ -90,8 +91,14 @@ void* alumno(void *arg);
 /*Funcion que ejecutan los procesos profesor*/
 int profesor(int aula, key_t clave_sem, key_t clave_aula, key_t clave_msq);
 
+/*Funcion que ejecuta el proceso que muestra el ps*/
+int vigilante();
+
 /*Handler de sigterm para los profesores*/
 void handler_sigterm();
+
+/*Handler de SIG_ALRM para imprimir ps*/
+void handler_sigalrm();
 
 /*Variables globales*/
 alumno_state_t *estado_alumno;
@@ -130,6 +137,12 @@ int main() {
     /*Numero de alumnos que entraran en la simulacion*/
     printf("Introduzca el numero de alumnos: ");
     scanf("%u", &numero_alumnos);
+
+    if (fork() == 0) {
+        exit(vigilante());
+    }
+    
+    sleep(10);
 
     /*Reservamos memoria para los alumnos*/
     estado_alumno = (alumno_state_t*)check_mem(malloc(numero_alumnos*sizeof(alumno_state_t)));
@@ -197,7 +210,7 @@ int main() {
 
     /*FUNCION PRINCIPAL DEL PROCESO GESTOR*/
 
-    for (;; ) {
+    for (;;) {
         /*El gestor va mandando alumnos a un aula a hacer el examen*/
         for (i = 0; i < numero_alumnos; ++i) {
             int aula;
@@ -456,6 +469,37 @@ void handler_sigterm() {
     free(estado_alumno);
 
     exit(0);
+}
+
+void handler_sigalrm() {
+    pid_t gestor = getppid();
+    int fd = CHECK(open("SIGHUP_PPID_lista_proc.txt", O_CREAT | O_WRONLY));
+    
+    int p[2];
+    CHECK(pipe(p));
+    if (CHECK(fork()) == 0) {
+        char cmd[100];
+        char* prog_args[] = { "sh", "-c", cmd, NULL };
+        
+        sprintf(cmd, "ps -ef | grep %d | grep -v grep", gestor);
+    
+        CHECK(dup2(fd, STDOUT_FILENO));
+        
+        CHECK(execvp("sh", prog_args));
+    }
+}
+
+int vigilante() {
+    signal(SIGALRM, handler_sigalrm);
+    
+    handler_sigalrm();
+
+    for (;;) {
+        alarm(30);
+        pause();
+    }
+    
+    return 0;
 }
 
 int check_err(const char *fname, char *file, int line, int val, int exit_on_fail) {
