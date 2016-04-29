@@ -1,3 +1,12 @@
+/**
+ * @file final.c
+ * @brief Ejercicio final demostrando todas las tecnicas de la asignatura.
+
+ * @author Darío Adrián Hernández
+ * @author Ángel Manuel Martín
+ * @date 2016/04/29
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -1,7 +1,10 @@
 /**
- *
+ * @file cadena_montaje.c
+ * @brief Transforma un fichero a mayusculas usando tres procesos comunicados por mensajes.
+
+ * @author Darío Adrián Hernández
  * @author Ángel Manuel Martín
- * @author Darío Adrián Hernández Barroso
+ * @date 2016/04/29
  */
 
 #include <stdio.h>
