@@ -48,6 +48,7 @@
 #define ALUMNO_EXAMEN_MAXIMO 60
 #define ESPERA_VIGILANTE 30
 #define ESPERA_CAMPANA (5*60)
+#define MAX_ALUMNOS 124
 
 /*TAD asiento*/
 typedef struct {
@@ -171,6 +172,11 @@ int main() {
     /*Numero de alumnos que entraran en la simulacion*/
     printf("Introduzca el numero de alumnos: ");
     scanf("%u", &numero_alumnos);
+    while (numero_alumnos < 0 || numero_alumnos > MAX_ALUMNOS) {
+        printf("Debido a limitaciones del sistema no se admiten más de %d alumnos\n", MAX_ALUMNOS);
+        printf("Introduzca el numero de alumnos: ");
+        scanf("%u", &numero_alumnos);
+    }
 
     vigilante_pid = CHECK(fork());
     if (vigilante_pid == 0) {
