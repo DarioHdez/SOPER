@@ -36,6 +36,8 @@
 #define SIZEOF_AULA(tamanio_aula) (sizeof(aula_t) + (tamanio_aula)*sizeof(asiento_t))
 #define NUM_SEMAFOROS (NUM_AULAS + (numero_alumnos*2))
 
+#define ALUMNO_ESPERA_MAXIMA 10
+
 
 /*TAD asiento*/
 typedef struct {
@@ -100,6 +102,8 @@ void handler_sigterm();
 /*Handler de SIG_ALRM para imprimir ps*/
 void handler_sigalrm();
 
+void aula_debug(aula_t *aula);
+
 /*Variables globales*/
 alumno_state_t *estado_alumno;
 
@@ -125,6 +129,7 @@ int main() {
     unsigned int numero_alumnos;
     unsigned int i, j, k;
     pid_t profesor_pid[NUM_AULAS][NUM_PROFS_POR_AULA];
+    pid_t vigilante_pid;
 
     /*INICIO DEL PROGRAMA*/
 
@@ -138,11 +143,10 @@ int main() {
     printf("Introduzca el numero de alumnos: ");
     scanf("%u", &numero_alumnos);
 
-    if (fork() == 0) {
+    vigilante_pid = CHECK(fork());
+    if (vigilante_pid == 0) {
         exit(vigilante());
     }
-    
-    sleep(10);
 
     /*Reservamos memoria para los alumnos*/
     estado_alumno = (alumno_state_t*)check_mem(malloc(numero_alumnos*sizeof(alumno_state_t)));
@@ -238,7 +242,7 @@ int main() {
                         CHECK(alumno_lock(&estado_alumno[k]));
                         if (estado_alumno[k].aula == j && estado_alumno[k].esperando) {
                             estado_alumno[k].muevete = 1;
-                            printf("Gestor: Mandando mover a alumno %d\n", estado_alumno[k].num_sem_sync / 2 - 1);
+                            //printf("Gestor: Mandando mover a alumno %d\n", estado_alumno[k].num_sem_sync / 2 - 1);
                             CHECK(alumno_despertar(&estado_alumno[k]));
                             necesito_mover = 0;
                         }
@@ -266,6 +270,12 @@ int main() {
         if (esperando == 0) {
             break;
         }
+
+        for (k = 0; k < NUM_AULAS; ++k) {
+            aula_debug(mem_aula[k]);
+        }
+
+        sleep(1);
     }
 
     /*LIBERAMOS TODOS LOS RECURSOS UTILIZADOS*/
@@ -280,10 +290,12 @@ int main() {
     /*Borramos los semaforos*/
     CHECK(Borrar_Semaforo(semid));
 
+    CHECK(kill(vigilante_pid, SIGTERM));
+
     /*Mandamos la señal SIGTERM a los procesos profesor*/
     for (i = 0; i < NUM_AULAS; ++i) {
         for (j = 0; j < NUM_PROFS_POR_AULA; ++j) {
-            kill(profesor_pid[i][j], SIGTERM);
+            CHECK(kill(profesor_pid[i][j], SIGTERM));
         }
     }
 
@@ -328,6 +340,19 @@ fail_sem:
     return 1;
 }
 
+void aula_debug(aula_t *aula) {
+    int id_aula = aula->num_sem_aula_mutex + 1;
+    int i;
+
+    CHECK(aula_lock(aula));
+        printf("Aula %d: %d/%d\n\n", id_aula, aula->ocupacion, aula->capacidad);
+        for (i = 0; i < aula->capacidad; ++i) {
+            printf("%c%c", aula->asientos[i].ocupado ? 'O' : '_', (i + 1) % 11 ? ' ' : '\n');
+        }
+        printf("\n\n");
+    CHECK(aula_unlock(aula));
+}
+
 int alumno_lock(alumno_state_t *state) {
     return Down_Semaforo(semid, state->num_sem_mutex, 1);
 }
@@ -353,6 +378,8 @@ void* alumno(void *arg) {
     alumno_state_t *estado = (alumno_state_t*)arg;
 
     int id = estado->num_sem_sync/2 - 1;
+
+    sleep(rand() % ALUMNO_ESPERA_MAXIMA);
 
     CHECK(alumno_lock(estado));
     printf("alumno %d: Probando aula %d\n", id, estado->aula + 1);
@@ -422,7 +449,6 @@ int profesor(int aula, key_t clave_sem, key_t clave_aula, key_t clave_msq) {
 
         CHECK(aula_lock(mem_aula));
         /*Sienta al alumno y actualiza el aula*/
-        printf("Profe %d: Colocando alumno %d\n", getpid(), id_alum);
 
         int i;
         for (i = 0; i < mem_aula->capacidad; ++i) {
@@ -431,7 +457,7 @@ int profesor(int aula, key_t clave_sem, key_t clave_aula, key_t clave_msq) {
                 mem_aula->asientos[i].th = cm->th;
 
                 mem_aula->ocupacion++;
-                printf("Profe %d: ocupacion aula %d = %d\n", getpid(), aula + 1, mem_aula->ocupacion);
+                //printf("Profe %d: ocupacion aula %d = %d\n", getpid(), aula + 1, mem_aula->ocupacion);
 
                 printf("Profe %d: Alumno %d colocado en asiento %d(aula %d)\n", getpid(), id_alum, i, aula + 1);
                 CHECK(Up_Semaforo(semid, cm->num_sem_sync, 1));
@@ -440,9 +466,9 @@ int profesor(int aula, key_t clave_sem, key_t clave_aula, key_t clave_msq) {
         }
 
         /*Comprueba si entran mas alumnos en el aula*/
-        if (i == mem_aula->capacidad) {
+        /*if (i == mem_aula->capacidad) {
             printf("Profe %d: No hay asiento para alumno %d en aula %d\n", getpid(), id_alum, aula + 1);
-        }
+        }*/
 
         CHECK(aula_unlock(mem_aula));
     }
@@ -473,7 +499,7 @@ void handler_sigterm() {
 
 void handler_sigalrm() {
     pid_t gestor = getppid();
-    int fd = CHECK(open("SIGHUP_PPID_lista_proc.txt", O_CREAT | O_WRONLY));
+    int fd = CHECK(open("SIGHUP_PPID_lista_proc.txt",  O_RDWR | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR));
     
     int p[2];
     CHECK(pipe(p));
@@ -481,21 +507,27 @@ void handler_sigalrm() {
         char cmd[100];
         char* prog_args[] = { "sh", "-c", cmd, NULL };
         
-        sprintf(cmd, "ps -ef | grep %d | grep -v grep", gestor);
+        sprintf(cmd, "echo LISTADO DE PROCESOS && (ps -ef | grep %d | grep -v grep)", gestor);
     
         CHECK(dup2(fd, STDOUT_FILENO));
         
         CHECK(execvp("sh", prog_args));
+        perror("execvp");
     }
 }
 
+void handler_sigterm_vigilante() {
+    printf("Vigilante %d: acaba\n", getpid());
+
+    exit(0);
+}
+
 int vigilante() {
+    signal(SIGTERM, handler_sigterm_vigilante);
     signal(SIGALRM, handler_sigalrm);
-    
-    handler_sigalrm();
 
     for (;;) {
-        alarm(30);
+        alarm(3);
         pause();
     }
     
