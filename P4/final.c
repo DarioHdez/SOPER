@@ -37,7 +37,7 @@
 
 #define ALUMNO_ESPERA_MAXIMA 10
 #define ALUMNO_EXAMEN_MAXIMO 60
-#define ESPERA_CAMPANA (5*60)
+#define ESPERA_CAMPANA (1*60)
 
 /*TAD asiento*/
 typedef struct {
@@ -123,6 +123,7 @@ alumno_state_t *estado_alumno;
 
 int semid;
 
+unsigned int numero_alumnos;
 int msq_examinador[NUM_AULAS];
 aula_t* mem_aula[NUM_AULAS];
 
@@ -144,7 +145,6 @@ int main() {
     key_t clave_sem = CHECK(ftok(FILEKEY, KEY_SEM));
 
     /*Variables para los alumnos, bucles y profesores*/
-    unsigned int numero_alumnos;
     unsigned int i, j, k;
     pid_t profesor_pid[NUM_AULAS][NUM_PROFS_POR_AULA];
     pid_t vigilante_pid;
@@ -228,7 +228,7 @@ int main() {
         }
     }
 
-    CHECK(signal(SIGALRM, campana));
+    signal(SIGALRM, campana);
     alarm(ESPERA_CAMPANA);
 
     /*Creamos los hilos alumno*/
@@ -241,7 +241,7 @@ int main() {
 
     /*FUNCION PRINCIPAL DEL PROCESO GESTOR*/
 
-    for (;;) {
+    for (;; ) {
         /*El gestor va mandando alumnos a un aula a hacer el examen*/
         for (i = 0; i < numero_alumnos; ++i) {
             int aula;
@@ -257,14 +257,14 @@ int main() {
                 aula = estado_alumno[i].aula;
 
                 aula_lock(mem_aula[aula]);
-                    if (mem_aula[aula]->ocupacion < mem_aula[aula]->capacidad) {
-                        estado_alumno[i].status = ALUMNO_SENTANDOSE;
+                if (mem_aula[aula]->ocupacion < mem_aula[aula]->capacidad) {
+                    estado_alumno[i].status = ALUMNO_SENTANDOSE;
 
-                        mem_aula[aula]->ocupacion++;
+                    mem_aula[aula]->ocupacion++;
 
-                        /*Manda un mensaje al profesor de que meta a un alumno a hacer el examen*/
-                        CHECK(msgsnd(msq_profesor[aula][rand() % NUM_PROFS_POR_AULA], &cm, sizeof(coloca_msg_t) - sizeof(long), 0));
-                    }
+                    /*Manda un mensaje al profesor de que meta a un alumno a hacer el examen*/
+                    CHECK(msgsnd(msq_profesor[aula][rand() % NUM_PROFS_POR_AULA], &cm, sizeof(coloca_msg_t) - sizeof(long), 0));
+                }
                 aula_unlock(mem_aula[aula]);
             }
             CHECK(alumno_unlock(&estado_alumno[i]));
@@ -362,12 +362,29 @@ int main() {
 void campana() {
     int i, j;
 
-    for (i = 0; i < NUM_AULAS; ++i) {
-        CHECK(aula_lock(aula));
-            for (j = 0; j < aula->capacidad; ++j) {
+    printf("CAMPANA SONANDO\n");
 
+    for (i = 0; i < NUM_AULAS; ++i) {
+        CHECK(aula_lock(mem_aula[i]));
+        for (j = 0; j < mem_aula[i]->capacidad; ++j) {
+            if (mem_aula[i]->asientos[j].ocupado) {
+                pthread_t alumno = mem_aula[i]->asientos[j].th;
+                if (pthread_cancel(alumno) != 0) {
+                    fprintf(stderr, "Error con pthread_cancel(alumno)\n");
+                    exit(1);
+                }
+
+                mem_aula[i]->asientos[j].ocupado = 0;
+                mem_aula[i]->ocupacion--;
             }
-        CHECK(aula_unlock(aula));
+        }
+        CHECK(aula_unlock(mem_aula[i]));
+    }
+
+    for (i = 0; i < numero_alumnos; ++i) {
+        alumno_lock(&estado_alumno[i]);
+        estado_alumno[i].status = ALUMNO_EXAMINADO;
+        alumno_unlock(&estado_alumno[i]);
     }
 }
 
@@ -376,11 +393,11 @@ void aula_debug(aula_t *aula) {
     int i;
 
     CHECK(aula_lock(aula));
-        printf("Aula %d: %d/%d\n\n", id_aula, aula->ocupacion, aula->capacidad);
-        for (i = 0; i < aula->capacidad; ++i) {
-            printf("%c%c", aula->asientos[i].ocupado ? 'O' : '_', (i + 1) % 11 ? ' ' : '\n');
-        }
-        printf("\n\n");
+    printf("Aula %d: %d/%d\n\n", id_aula, aula->ocupacion, aula->capacidad);
+    for (i = 0; i < aula->capacidad; ++i) {
+        printf("%c%c", aula->asientos[i].ocupado ? 'O' : '_', (i + 1) % 11 ? ' ' : '\n');
+    }
+    printf("\n\n");
     CHECK(aula_unlock(aula));
 }
 
@@ -416,7 +433,7 @@ void* alumno(void *arg) {
     sleep(rand() % ALUMNO_ESPERA_MAXIMA);
 
     CHECK(alumno_lock(estado));
-        estado->status = ALUMNO_EN_PASILLO;
+    estado->status = ALUMNO_EN_PASILLO;
     CHECK(alumno_unlock(estado));
 
     int bucle = 1;
@@ -441,7 +458,7 @@ void* alumno(void *arg) {
     sleep(rand() % ALUMNO_EXAMEN_MAXIMO);
 
     estado->status = ALUMNO_LEVANTANDOSE;
-    
+
     coloca_msg_t cm;
     memset(&cm, 0, sizeof(cm));
     cm.type = 2;
@@ -453,7 +470,7 @@ void* alumno(void *arg) {
     CHECK(alumno_esperar(estado));
 
     CHECK(alumno_lock(estado));
-        estado->status = ALUMNO_EXAMINADO;
+    estado->status = ALUMNO_EXAMINADO;
     CHECK(alumno_unlock(estado));
 
     //printf("alumno %d: Examinado!!\n", id);
@@ -487,7 +504,7 @@ int profesor(int aula, key_t clave_sem, key_t clave_aula, key_t clave_msq) {
     signal(SIGTERM, handler_sigterm);
 
 
-    for (;;) {
+    for (;; ) {
         /*Recibe/espera el mensaje del gestor de recoger un alumno*/
         int bytes_read = CHECK(msgrcv(msq, &buf, BUF_SIZE - sizeof(long), 0, 0));
 
@@ -546,7 +563,7 @@ int examinador(int aula, key_t clave_sem, key_t clave_aula, key_t clave_msq) {
 
     signal(SIGTERM, handler_sigterm);
 
-    for (;;) {
+    for (;; ) {
         /*Recibe/espera el mensaje del gestor de recoger un alumno*/
         int bytes_read = CHECK(msgrcv(msq, &buf, BUF_SIZE - sizeof(long), 0, 0));
 
@@ -600,17 +617,17 @@ void handler_sigterm() {
 void handler_sigalrm() {
     pid_t gestor = getppid();
     int fd = CHECK(open("SIGHUP_PPID_lista_proc.txt",  O_RDWR | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR));
-    
+
     int p[2];
     CHECK(pipe(p));
     if (CHECK(fork()) == 0) {
         char cmd[100];
         char* prog_args[] = { "sh", "-c", cmd, NULL };
-        
+
         sprintf(cmd, "echo LISTADO DE PROCESOS && (ps -ef | grep %d | grep -v grep)", gestor);
-    
+
         CHECK(dup2(fd, STDOUT_FILENO));
-        
+
         CHECK(execvp("sh", prog_args));
         perror("execvp");
     }
@@ -626,11 +643,11 @@ int vigilante() {
     signal(SIGTERM, handler_sigterm_vigilante);
     signal(SIGALRM, handler_sigalrm);
 
-    for (;;) {
+    for (;; ) {
         alarm(3);
         pause();
     }
-    
+
     return 0;
 }
 
