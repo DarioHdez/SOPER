@@ -82,7 +82,7 @@ int procesoB() {
 
 int procesoC(char *write_file) {
     int msq2_id = check_err("msgget", msgget(key2, 0));
-    int fd = check_err("open(write_file, O_CREAT | O_WRONLY)", open(write_file, O_CREAT | O_WRONLY));
+    int fd = check_err("open(write_file, O_CREAT | O_RDWR)", open(write_file, O_CREAT | O_RDWR));
     char *buf = (char*)check_mem(malloc(BLOCK_SIZE));
     ssize_t bytes_read;
 
