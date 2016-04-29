@@ -45,13 +45,20 @@ typedef struct {
     pthread_t th;
 } asiento_t;
 
+typedef enum {
+    ALUMNO_EN_CALLE,
+    ALUMNO_EN_PASILLO,
+    ALUMNO_MOVIENDOSE,
+    ALUMNO_SENTANDOSE,
+    ALUMNO_SENTADO
+} alumno_status_t;
+
 /*TAD alumno*/
 typedef struct {
     int num_sem_mutex;
     int num_sem_sync;
     pthread_t th;
-    int muevete;
-    int esperando;
+    alumno_status_t status;
     int aula;
 } alumno_state_t;
 
@@ -205,8 +212,7 @@ int main() {
 
     /*Creamos los hilos alumno*/
     for (i = 0; i < numero_alumnos; ++i) {
-        estado_alumno[i].muevete = 0;
-        estado_alumno[i].esperando = 1;
+        estado_alumno[i].status = ALUMNO_EN_CALLE;
         estado_alumno[i].aula = i % NUM_AULAS;
 
         CHECK(pthread_create(&estado_alumno[i].th, NULL, alumno, &estado_alumno[i]));
@@ -220,37 +226,49 @@ int main() {
             int aula;
 
             CHECK(alumno_lock(&estado_alumno[i]));
-            if(estado_alumno[i].esperando) {
+            if(estado_alumno[i].status == ALUMNO_EN_PASILLO) {
                 coloca_msg_t cm;
                 memset(&cm, 0, sizeof(cm));     //Calm valgrind
                 cm.type = 1;
                 cm.th = estado_alumno[i].th;
                 cm.num_sem_sync = estado_alumno[i].num_sem_sync;
 
-                /*Manda un mensaje al profesor de que meta a un alumno a hacer el examen*/
                 aula = estado_alumno[i].aula;
-                CHECK(msgsnd(msq_profesor[aula][0], &cm, sizeof(coloca_msg_t) - sizeof(long), 0));
+
+                aula_lock(mem_aula[aula]);
+                    if (mem_aula[aula]->ocupacion < mem_aula[aula]->capacidad) {
+                        estado_alumno[i].status = ALUMNO_SENTANDOSE;
+
+                        mem_aula[aula]->ocupacion++;
+
+                        /*Manda un mensaje al profesor de que meta a un alumno a hacer el examen*/
+                        CHECK(msgsnd(msq_profesor[aula][0], &cm, sizeof(coloca_msg_t) - sizeof(long), 0));
+                    }
+                aula_unlock(mem_aula[aula]);
             }
             CHECK(alumno_unlock(&estado_alumno[i]));
+        }
 
-            /*En este bucle el gestor mira si hay algun aula a más del 85% y movemos alumnos en funcion de eso*/
-            for (j = 0; j < NUM_AULAS; ++j) {
-                CHECK(aula_lock(mem_aula[j]));
-                int necesito_mover = mem_aula[j]->ocupacion > (float)mem_aula[j]->capacidad*0.85;
-                if (necesito_mover) {
-                    for (k = 0; k < numero_alumnos; ++k) {
-                        CHECK(alumno_lock(&estado_alumno[k]));
-                        if (estado_alumno[k].aula == j && estado_alumno[k].esperando) {
-                            estado_alumno[k].muevete = 1;
-                            //printf("Gestor: Mandando mover a alumno %d\n", estado_alumno[k].num_sem_sync / 2 - 1);
-                            CHECK(alumno_despertar(&estado_alumno[k]));
-                            necesito_mover = 0;
-                        }
-                        CHECK(alumno_unlock(&estado_alumno[k]));
+        sleep(1);
+
+        /*En este bucle el gestor mira si hay algun aula a más del 85% y movemos alumnos en funcion de eso*/
+        for (j = 0; j < NUM_AULAS; ++j) {
+            CHECK(aula_lock(mem_aula[j]));
+            int necesito_mover = mem_aula[j]->ocupacion >= (float)mem_aula[j]->capacidad*0.85;
+            //int necesito_mover = mem_aula[j]->ocupacion >= mem_aula[j]->capacidad;
+
+            if (necesito_mover) {
+                for (k = 0; k < numero_alumnos; ++k) {
+                    CHECK(alumno_lock(&estado_alumno[k]));
+                    if (estado_alumno[k].aula == j && estado_alumno[k].status == ALUMNO_EN_PASILLO) {
+                        estado_alumno[k].status = ALUMNO_MOVIENDOSE;
+                        CHECK(alumno_despertar(&estado_alumno[k]));
+                        necesito_mover = 0;
                     }
+                    CHECK(alumno_unlock(&estado_alumno[k]));
                 }
-                CHECK(aula_unlock(mem_aula[j]));
             }
+            CHECK(aula_unlock(mem_aula[j]));
         }
 
         int esperando = 0;
@@ -258,7 +276,7 @@ int main() {
         /*En este bucle el gestor mira si quedan alumnos esperando para hacer el examen*/
         for (k = 0; k < numero_alumnos; ++k) {
             CHECK(alumno_lock(&estado_alumno[k]));
-            if (estado_alumno[k].esperando) {
+            if (estado_alumno[k].status != ALUMNO_SENTADO) {
                 esperando++;
             }
             CHECK(alumno_unlock(&estado_alumno[k]));
@@ -266,16 +284,14 @@ int main() {
 
         printf("esperando = %d\n", esperando);
 
-        /*Cuando no queden alumnos esperando para hacer el examen acabo mi funcion de gestor*/
-        if (esperando == 0) {
-            break;
-        }
-
         for (k = 0; k < NUM_AULAS; ++k) {
             aula_debug(mem_aula[k]);
         }
 
-        sleep(1);
+        /*Cuando no queden alumnos esperando para hacer el examen acabo mi funcion de gestor*/
+        if (esperando == 0) {
+            break;
+        }
     }
 
     /*LIBERAMOS TODOS LOS RECURSOS UTILIZADOS*/
@@ -382,7 +398,7 @@ void* alumno(void *arg) {
     sleep(rand() % ALUMNO_ESPERA_MAXIMA);
 
     CHECK(alumno_lock(estado));
-    printf("alumno %d: Probando aula %d\n", id, estado->aula + 1);
+        estado->status = ALUMNO_EN_PASILLO;
     CHECK(alumno_unlock(estado));
 
     int bucle = 1;
@@ -392,13 +408,13 @@ void* alumno(void *arg) {
 
         /*Si el alumno no se tiene que mover hace el examen y sale del bucle*/
         CHECK(alumno_lock(estado));
-        if (estado->muevete) {
+        if (estado->status == ALUMNO_MOVIENDOSE) {
             estado->aula = (estado->aula + 1) % NUM_AULAS;
             printf("alumno %d: Me muevo a aula %d\n", id, estado->aula + 1);
-            estado->muevete = 0;
-        } else {
-            estado->esperando = 0;
-            printf("alumno %d: Espera terminada\n", id);
+            estado->status = ALUMNO_EN_PASILLO;
+        } else if (estado->status == ALUMNO_SENTANDOSE) {
+            estado->status = ALUMNO_SENTADO;
+            //printf("alumno %d: Espera terminada\n", id);
             bucle = 0;
         }
         CHECK(alumno_unlock(estado));
@@ -433,7 +449,7 @@ int profesor(int aula, key_t clave_sem, key_t clave_aula, key_t clave_msq) {
     signal(SIGTERM, handler_sigterm);
 
 
-    for (;; ) {
+    for (;;) {
         /*Recibe/espera el mensaje del gestor de recoger un alumno*/
         int bytes_read = msgrcv(msq, &buf, BUF_SIZE - sizeof(long), 0, 0);
         CHECK_GOTO(bytes_read, msgrcv_err)
@@ -456,19 +472,19 @@ int profesor(int aula, key_t clave_sem, key_t clave_aula, key_t clave_msq) {
                 mem_aula->asientos[i].ocupado = 1;
                 mem_aula->asientos[i].th = cm->th;
 
-                mem_aula->ocupacion++;
+                //mem_aula->ocupacion++;
                 //printf("Profe %d: ocupacion aula %d = %d\n", getpid(), aula + 1, mem_aula->ocupacion);
 
-                printf("Profe %d: Alumno %d colocado en asiento %d(aula %d)\n", getpid(), id_alum, i, aula + 1);
+                //printf("Profe %d: Alumno %d colocado en asiento %d(aula %d)\n", getpid(), id_alum, i, aula + 1);
                 CHECK(Up_Semaforo(semid, cm->num_sem_sync, 1));
                 break;
             }
         }
 
         /*Comprueba si entran mas alumnos en el aula*/
-        /*if (i == mem_aula->capacidad) {
+        if (i == mem_aula->capacidad) {
             printf("Profe %d: No hay asiento para alumno %d en aula %d\n", getpid(), id_alum, aula + 1);
-        }*/
+        }
 
         CHECK(aula_unlock(mem_aula));
     }
