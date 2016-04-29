@@ -25,7 +25,6 @@
 #define BUF_SIZE 1024
 
 #define CHECK(f) (check_err(# f, __FILE__, __LINE__, (f), 1))
-#define CHECK_GOTO(val, g) { if (check_err(# val, __FILE__, __LINE__, (val), 0) == -1) { goto g; } }
 
 #define FILEKEY "/bin/cat"
 #define KEY_SEM 24667
@@ -37,7 +36,8 @@
 #define NUM_SEMAFOROS (NUM_AULAS + (numero_alumnos*2))
 
 #define ALUMNO_ESPERA_MAXIMA 10
-
+#define ALUMNO_EXAMEN_MAXIMO 60
+#define ESPERA_CAMPANA (5*60)
 
 /*TAD asiento*/
 typedef struct {
@@ -50,7 +50,9 @@ typedef enum {
     ALUMNO_EN_PASILLO,
     ALUMNO_MOVIENDOSE,
     ALUMNO_SENTANDOSE,
-    ALUMNO_SENTADO
+    ALUMNO_SENTADO,
+    ALUMNO_LEVANTANDOSE,
+    ALUMNO_EXAMINADO
 } alumno_status_t;
 
 /*TAD alumno*/
@@ -100,6 +102,8 @@ void* alumno(void *arg);
 /*Funcion que ejecutan los procesos profesor*/
 int profesor(int aula, key_t clave_sem, key_t clave_aula, key_t clave_msq);
 
+int examinador(int aula, key_t clave_sem, key_t clave_aula, key_t clave_msq);
+
 /*Funcion que ejecuta el proceso que muestra el ps*/
 int vigilante();
 
@@ -109,12 +113,18 @@ void handler_sigterm();
 /*Handler de SIG_ALRM para imprimir ps*/
 void handler_sigalrm();
 
+/*Campanazo*/
+void campana();
+
 void aula_debug(aula_t *aula);
 
 /*Variables globales*/
 alumno_state_t *estado_alumno;
 
 int semid;
+
+int msq_examinador[NUM_AULAS];
+aula_t* mem_aula[NUM_AULAS];
 
 /*Programa principal*/
 int main() {
@@ -123,11 +133,12 @@ int main() {
     /*Variables para reservar la memoria compartida */
     key_t clave_aula[NUM_AULAS];
     int shm_aula[NUM_AULAS];
-    aula_t* mem_aula[NUM_AULAS];
 
     /*Variables para la cola de mensajes de los profesores*/
     key_t clave_profesor[NUM_AULAS][NUM_PROFS_POR_AULA];
     int msq_profesor[NUM_AULAS][NUM_PROFS_POR_AULA];
+
+    key_t clave_examinador[NUM_AULAS];
 
     /*Variables para reservar los semaforos*/
     key_t clave_sem = CHECK(ftok(FILEKEY, KEY_SEM));
@@ -137,6 +148,7 @@ int main() {
     unsigned int i, j, k;
     pid_t profesor_pid[NUM_AULAS][NUM_PROFS_POR_AULA];
     pid_t vigilante_pid;
+    pid_t examinador_pid[NUM_AULAS];
 
     /*INICIO DEL PROGRAMA*/
 
@@ -159,7 +171,7 @@ int main() {
     estado_alumno = (alumno_state_t*)check_mem(malloc(numero_alumnos*sizeof(alumno_state_t)));
 
     /*Creamos los semaforos*/
-    CHECK_GOTO(Crear_Semaforo(clave_sem, NUM_SEMAFOROS, &semid), fail_sem);
+    CHECK(Crear_Semaforo(clave_sem, NUM_SEMAFOROS, &semid));
     unsigned short* inicializacion = (unsigned short*)check_mem(malloc(NUM_SEMAFOROS*sizeof(unsigned short)));
 
     /*Bucles de inicializacion de semaforos*/
@@ -186,8 +198,7 @@ int main() {
     for (i = 0; i < NUM_AULAS; ++i) {
         /*Memoria compartida*/
         clave_aula[i] = CHECK(ftok(FILEKEY, BASEKEY_SHM + i));
-        shm_aula[i] = shmget(clave_aula[i], SIZEOF_AULA(tamanio_aula[i]), IPC_CREAT | IPC_EXCL | SHM_R | SHM_W);
-        CHECK_GOTO(shm_aula[i], fail_shm);
+        shm_aula[i] = CHECK(shmget(clave_aula[i], SIZEOF_AULA(tamanio_aula[i]), IPC_CREAT | IPC_EXCL | SHM_R | SHM_W));
         mem_aula[i] = (aula_t*)shmat(shm_aula[i], NULL, 0);
         if (mem_aula[i] == (void*)-1) { fprintf(stderr, "Fallo en shmat\n"); exit(1); }
 
@@ -196,11 +207,18 @@ int main() {
         mem_aula[i]->ocupacion = 0;
         memset(mem_aula[i]->asientos, 0, SIZEOF_AULA(tamanio_aula[i])); /* Los asientos empiezan vacios */
 
+        clave_examinador[i] = CHECK(ftok(FILEKEY, BASEKEY_MSQ + i));
+        msq_examinador[i] = CHECK(msgget(clave_examinador[i], IPC_CREAT | MSQ_PERMS));
+
+        examinador_pid[i] = CHECK(fork());
+        if (examinador_pid[i] == 0) {
+            exit(examinador(i, clave_sem, clave_aula[i], clave_examinador[i]));
+        }
+
         /*Colas de mensajes de los profesores*/
         for (j = 0; j < NUM_PROFS_POR_AULA; ++j) {
-            clave_profesor[i][j] = CHECK(ftok(FILEKEY, BASEKEY_MSQ + i*NUM_PROFS_POR_AULA + j));
-            msq_profesor[i][j] = msgget(clave_profesor[i][j], IPC_CREAT | MSQ_PERMS);
-            CHECK_GOTO(msq_profesor[i][j], fail_msq);
+            clave_profesor[i][j] = CHECK(ftok(FILEKEY, BASEKEY_MSQ + NUM_AULAS + i*NUM_PROFS_POR_AULA + j));
+            msq_profesor[i][j] = CHECK(msgget(clave_profesor[i][j], IPC_CREAT | MSQ_PERMS));
 
             /*Creamos los procesos profesor*/
             profesor_pid[i][j] = CHECK(fork());
@@ -209,6 +227,9 @@ int main() {
             }
         }
     }
+
+    CHECK(signal(SIGALRM, campana));
+    alarm(ESPERA_CAMPANA);
 
     /*Creamos los hilos alumno*/
     for (i = 0; i < numero_alumnos; ++i) {
@@ -242,7 +263,7 @@ int main() {
                         mem_aula[aula]->ocupacion++;
 
                         /*Manda un mensaje al profesor de que meta a un alumno a hacer el examen*/
-                        CHECK(msgsnd(msq_profesor[aula][0], &cm, sizeof(coloca_msg_t) - sizeof(long), 0));
+                        CHECK(msgsnd(msq_profesor[aula][rand() % NUM_PROFS_POR_AULA], &cm, sizeof(coloca_msg_t) - sizeof(long), 0));
                     }
                 aula_unlock(mem_aula[aula]);
             }
@@ -271,25 +292,25 @@ int main() {
             CHECK(aula_unlock(mem_aula[j]));
         }
 
-        int esperando = 0;
+        int sin_terminar = 0;
 
         /*En este bucle el gestor mira si quedan alumnos esperando para hacer el examen*/
         for (k = 0; k < numero_alumnos; ++k) {
             CHECK(alumno_lock(&estado_alumno[k]));
-            if (estado_alumno[k].status != ALUMNO_SENTADO) {
-                esperando++;
+            if (estado_alumno[k].status != ALUMNO_EXAMINADO) {
+                sin_terminar++;
             }
             CHECK(alumno_unlock(&estado_alumno[k]));
         }
 
-        printf("esperando = %d\n", esperando);
+        printf("Examinados: %d/%d\n", numero_alumnos - sin_terminar, numero_alumnos);
 
         for (k = 0; k < NUM_AULAS; ++k) {
             aula_debug(mem_aula[k]);
         }
 
         /*Cuando no queden alumnos esperando para hacer el examen acabo mi funcion de gestor*/
-        if (esperando == 0) {
+        if (sin_terminar == 0) {
             break;
         }
     }
@@ -310,6 +331,7 @@ int main() {
 
     /*Mandamos la señal SIGTERM a los procesos profesor*/
     for (i = 0; i < NUM_AULAS; ++i) {
+        CHECK(kill(examinador_pid[i], SIGTERM));
         for (j = 0; j < NUM_PROFS_POR_AULA; ++j) {
             CHECK(kill(profesor_pid[i][j], SIGTERM));
         }
@@ -317,6 +339,7 @@ int main() {
 
     /*Esperamos por los procesos profesor*/
     for (i = 0; i < NUM_AULAS; ++i) {
+        CHECK(wait(NULL));
         for (j = 0; j < NUM_PROFS_POR_AULA; ++j) {
             CHECK(wait(NULL));
         }
@@ -327,33 +350,25 @@ int main() {
         CHECK(shmdt(mem_aula[i]));
         CHECK(shmctl(shm_aula[i], IPC_RMID, NULL));
 
+        CHECK(msgctl(msq_examinador[i], IPC_RMID, NULL));
         for (j = 0; j < NUM_PROFS_POR_AULA; ++j) {
             CHECK(msgctl(msq_profesor[i][j], IPC_RMID, NULL));
         }
     }
 
     return 0;   /*Acabamos el programa*/
+}
 
-/*Si se produce algun error durante el programa(CHECK_GOTO), estas etiqutas liberan los recursos*/
-fail_msq:
-    for (k = 0; k <= j; ++k) {
-        CHECK(msgctl(clave_profesor[i][k], IPC_RMID, NULL));
+void campana() {
+    int i, j;
+
+    for (i = 0; i < NUM_AULAS; ++i) {
+        CHECK(aula_lock(aula));
+            for (j = 0; j < aula->capacidad; ++j) {
+
+            }
+        CHECK(aula_unlock(aula));
     }
-fail_shm:
-    for (j = 0; j <= i; ++j) {
-        CHECK(shmdt(mem_aula[j]));
-        CHECK(shmctl(shm_aula[j], IPC_RMID, NULL));
-
-        for (k = 0; j < NUM_PROFS_POR_AULA; ++j) {
-            CHECK(msgctl(clave_profesor[j][k], IPC_RMID, NULL));
-        }
-    }
-
-    CHECK(Borrar_Semaforo(semid));
-fail_sem:
-    free(estado_alumno);
-
-    return 1;
 }
 
 void aula_debug(aula_t *aula) {
@@ -391,9 +406,12 @@ void alumno_debug(alumno_state_t *state) {
 }
 
 void* alumno(void *arg) {
+    /*Permitimos cancelarnos en mitad del sleep*/
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+
     alumno_state_t *estado = (alumno_state_t*)arg;
 
-    int id = estado->num_sem_sync/2 - 1;
+    //int id = estado->num_sem_sync/2 - 1;
 
     sleep(rand() % ALUMNO_ESPERA_MAXIMA);
 
@@ -410,7 +428,7 @@ void* alumno(void *arg) {
         CHECK(alumno_lock(estado));
         if (estado->status == ALUMNO_MOVIENDOSE) {
             estado->aula = (estado->aula + 1) % NUM_AULAS;
-            printf("alumno %d: Me muevo a aula %d\n", id, estado->aula + 1);
+            //printf("alumno %d: Me muevo a aula %d\n", id, estado->aula + 1);
             estado->status = ALUMNO_EN_PASILLO;
         } else if (estado->status == ALUMNO_SENTANDOSE) {
             estado->status = ALUMNO_SENTADO;
@@ -419,6 +437,26 @@ void* alumno(void *arg) {
         }
         CHECK(alumno_unlock(estado));
     }
+
+    sleep(rand() % ALUMNO_EXAMEN_MAXIMO);
+
+    estado->status = ALUMNO_LEVANTANDOSE;
+    
+    coloca_msg_t cm;
+    memset(&cm, 0, sizeof(cm));
+    cm.type = 2;
+    cm.num_sem_sync = estado->num_sem_sync;
+    cm.th = estado->th;
+
+    CHECK(msgsnd(msq_examinador[estado->aula], &cm, sizeof(cm) - sizeof(long), 0));
+
+    CHECK(alumno_esperar(estado));
+
+    CHECK(alumno_lock(estado));
+        estado->status = ALUMNO_EXAMINADO;
+    CHECK(alumno_unlock(estado));
+
+    //printf("alumno %d: Examinado!!\n", id);
 
     return 0; /*Termina*/
 }
@@ -451,8 +489,7 @@ int profesor(int aula, key_t clave_sem, key_t clave_aula, key_t clave_msq) {
 
     for (;;) {
         /*Recibe/espera el mensaje del gestor de recoger un alumno*/
-        int bytes_read = msgrcv(msq, &buf, BUF_SIZE - sizeof(long), 0, 0);
-        CHECK_GOTO(bytes_read, msgrcv_err)
+        int bytes_read = CHECK(msgrcv(msq, &buf, BUF_SIZE - sizeof(long), 0, 0));
 
         if (bytes_read + sizeof(long) < sizeof(coloca_msg_t)) {
             fprintf(stderr, "Mensaje demasiado pequeño\n");
@@ -473,9 +510,7 @@ int profesor(int aula, key_t clave_sem, key_t clave_aula, key_t clave_msq) {
                 mem_aula->asientos[i].th = cm->th;
 
                 //mem_aula->ocupacion++;
-                //printf("Profe %d: ocupacion aula %d = %d\n", getpid(), aula + 1, mem_aula->ocupacion);
 
-                //printf("Profe %d: Alumno %d colocado en asiento %d(aula %d)\n", getpid(), id_alum, i, aula + 1);
                 CHECK(Up_Semaforo(semid, cm->num_sem_sync, 1));
                 break;
             }
@@ -492,15 +527,64 @@ int profesor(int aula, key_t clave_sem, key_t clave_aula, key_t clave_msq) {
     CHECK(shmdt(mem_aula)); //Se quita de la memoria compartida
 
     return 0;
+}
 
-/*En caso de error al recibir el mensaje*/
-msgrcv_err:
-    if (errno == EINTR) {
-        CHECK(shmdt(mem_aula));
-        return 0;
+int examinador(int aula, key_t clave_sem, key_t clave_aula, key_t clave_msq) {
+    int shm_aula;
+    aula_t *mem_aula;
+    int msq;
+    char buf[BUF_SIZE];
+
+    /*El profesor se une a los semaforos*/
+    CHECK(Crear_Semaforo(clave_sem, 0, &semid));
+
+    /*El profesor se une a la memoria compartida*/
+    shm_aula = CHECK(shmget(clave_aula, 0, SHM_R | SHM_W));
+    mem_aula = (aula_t*)shmat(shm_aula, NULL, 0);
+    if (mem_aula == (void*)-1) { fprintf(stderr, "Fallo en shmat\n"); return 1; }
+    msq = CHECK(msgget(clave_msq, 0));
+
+    signal(SIGTERM, handler_sigterm);
+
+    for (;;) {
+        /*Recibe/espera el mensaje del gestor de recoger un alumno*/
+        int bytes_read = CHECK(msgrcv(msq, &buf, BUF_SIZE - sizeof(long), 0, 0));
+
+        if (bytes_read + sizeof(long) < sizeof(coloca_msg_t)) {
+            fprintf(stderr, "Mensaje demasiado pequeño\n");
+            break;
+        }
+
+        coloca_msg_t *cm = (coloca_msg_t*)buf;
+
+        int id_alum = cm->num_sem_sync/2 - 1;
+
+        CHECK(aula_lock(mem_aula));
+        /*Sienta al alumno y actualiza el aula*/
+
+        int i;
+        for (i = 0; i < mem_aula->capacidad; ++i) {
+            if (mem_aula->asientos[i].ocupado == 1 && mem_aula->asientos[i].th == cm->th) {
+                mem_aula->asientos[i].ocupado = 0;
+
+                mem_aula->ocupacion--;
+
+                CHECK(Up_Semaforo(semid, cm->num_sem_sync, 1));
+                break;
+            }
+        }
+
+        /*Comprueba si entran mas alumnos en el aula*/
+        if (i == mem_aula->capacidad) {
+            printf("examinador %d: Alumno %d no encontrado en aula %d\n", getpid(), id_alum, aula + 1);
+        }
+
+        CHECK(aula_unlock(mem_aula));
     }
 
-    return 1;
+    CHECK(shmdt(mem_aula)); //Se quita de la memoria compartida
+
+    return 0;
 }
 
 
