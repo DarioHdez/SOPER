@@ -445,11 +445,9 @@ void* alumno(void *arg) {
         CHECK(alumno_lock(estado));
         if (estado->status == ALUMNO_MOVIENDOSE) {
             estado->aula = (estado->aula + 1) % NUM_AULAS;
-            //printf("alumno %d: Me muevo a aula %d\n", id, estado->aula + 1);
             estado->status = ALUMNO_EN_PASILLO;
         } else if (estado->status == ALUMNO_SENTANDOSE) {
             estado->status = ALUMNO_SENTADO;
-            //printf("alumno %d: Espera terminada\n", id);
             bucle = 0;
         }
         CHECK(alumno_unlock(estado));
@@ -472,8 +470,6 @@ void* alumno(void *arg) {
     CHECK(alumno_lock(estado));
     estado->status = ALUMNO_EXAMINADO;
     CHECK(alumno_unlock(estado));
-
-    //printf("alumno %d: Examinado!!\n", id);
 
     return 0; /*Termina*/
 }
