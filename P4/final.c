@@ -116,7 +116,7 @@ void handler_sigalrm();
 /*Campanazo*/
 void campana();
 
-void aula_debug(aula_t *aula);
+void aula_print(aula_t *aula);
 
 /*Variables globales*/
 alumno_state_t *estado_alumno;
@@ -306,7 +306,7 @@ int main() {
         printf("Examinados: %d/%d\n", numero_alumnos - sin_terminar, numero_alumnos);
 
         for (k = 0; k < NUM_AULAS; ++k) {
-            aula_debug(mem_aula[k]);
+            aula_print(mem_aula[k]);
         }
 
         /*Cuando no queden alumnos esperando para hacer el examen acabo mi funcion de gestor*/
@@ -388,7 +388,7 @@ void campana() {
     }
 }
 
-void aula_debug(aula_t *aula) {
+void aula_print(aula_t *aula) {
     int id_aula = aula->num_sem_aula_mutex + 1;
     int i;
 
