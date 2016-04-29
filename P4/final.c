@@ -46,7 +46,8 @@
 
 #define ALUMNO_ESPERA_MAXIMA 10
 #define ALUMNO_EXAMEN_MAXIMO 60
-#define ESPERA_CAMPANA (1*60)
+#define ESPERA_VIGILANTE 30
+#define ESPERA_CAMPANA (5*60)
 
 /*TAD asiento*/
 typedef struct {
@@ -649,7 +650,7 @@ int vigilante() {
     signal(SIGALRM, handler_sigalrm);
 
     for (;; ) {
-        alarm(3);
+        alarm(ESPERA_VIGILANTE);
         pause();
     }
 
